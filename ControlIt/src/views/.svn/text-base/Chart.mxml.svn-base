@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				 xmlns:s="library://ns.adobe.com/flex/spark" 
+				 xmlns:mx="library://ns.adobe.com/flex/mx"
+				 xmlns:charts="mx.charts.*"
+				 xmlns:series="mx.charts.series.*"
+				 xmlns:chartClasses="mx.charts.chartClasses.*"
+				 viewActivate="search()" title="Chart" xmlns:dao="dao.*">
+	
+	<fx:Script>
+		<![CDATA[
+			import ExpenseResponder.ExpensesResponder;
+			
+			import enums.TypeEnum;
+			
+			import model.Expense;
+			
+			import mx.charts.HitData;
+			import mx.charts.chartClasses.Series;
+			import mx.charts.series.items.PieSeriesItem;
+			import mx.collections.ArrayCollection;
+			import mx.collections.Grouping;
+			import mx.collections.GroupingCollection2;
+			import mx.collections.GroupingField;
+			import mx.graphics.shaderClasses.ExclusionShader;
+			
+			[Bindable]
+			protected var dataProvider:ArrayCollection=new ArrayCollection();
+			
+			protected function home_clickHandler(event:MouseEvent):void
+			{
+				navigator.popToFirstView();
+			}
+			
+			protected function back_clickHandler(event:MouseEvent):void
+			{
+				navigator.popView();
+			}
+			
+			public function search():void
+			{
+				var result:ArrayCollection=expensesService.getAllItems();
+				if(result && result.length>0 && (result[0] as Expense).id>=0)
+				{
+					var outcomes:Object=new Object();
+					outcomes.name="Expenses";
+					outcomes.type="O";
+					outcomes.value=0;
+					var incomes:Object=new Object();
+					incomes.name="Incomes";
+					incomes.type="I";
+					incomes.value=0;
+					for(var i:int=0;i<result.length;i++)
+					{
+						var exp:Expense=result[i] as Expense;
+						
+						if(exp.type==TypeEnum.OUTCOME)
+						{
+							outcomes.value=Number(outcomes.value)+Number(exp.value);
+						}
+						else
+						{
+							incomes.value=Number(incomes.value)+Number(exp.value);
+						}
+					}
+					
+					var categoryAC:ArrayCollection=new ArrayCollection();
+					if(outcomes.value>0)
+						categoryAC.addItem(outcomes);
+					if(incomes.value>0)
+						categoryAC.addItem(incomes);
+					dataProvider=categoryAC;
+				}
+				else
+				{
+					dataProvider=null;
+				}
+			}
+						
+			public function myDataFunction(series:Series, item:Object, fieldName:String):Object
+			{
+				return (item);
+			} 
+			public function myLabelFunction(data:Object, field:String, index:Number, percentValue:Number):String
+			{				
+				if(data.type==TypeEnum.INCOME)
+				{
+					return "Incomes\n" + data.value.toString();
+				}
+				else
+				{
+					return "Expenses\n" + data.value.toString();
+				}
+			}
+			
+			public function dataTipFunction(hitData:HitData):String
+			{
+				var str:String="";
+				if(hitData.item)
+				{
+					var exp:Object=hitData.item;
+					if(exp.type==TypeEnum.INCOME)
+					{
+						return (hitData.chartItem as PieSeriesItem).percentValue.toFixed(2)+"%"+"\nIncomes";
+					}
+					else
+					{
+						return (hitData.chartItem as PieSeriesItem).percentValue.toFixed(2)+"%"+"\nExpenses";
+					}
+				}
+				return hitData.id.toString();
+			}
+			
+			protected function add_clickHandler(event:MouseEvent):void
+			{
+				navigator.pushView(CreateExpense);
+			}
+			
+			protected function manage_clickHandler(event:MouseEvent):void
+			{
+				navigator.pushView(ManageExpense);
+			}
+			
+			protected function moreCharts_clickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<dao:ExpenseDAO id="expensesService"/> 
+	</fx:Declarations>
+	<s:navigationContent>
+		<s:Button label="Back" click="back_clickHandler(event)"/>
+	</s:navigationContent>
+	<s:actionContent>
+		<s:Button label="Home" click="home_clickHandler(event)"/>
+	</s:actionContent>
+	<s:VGroup width="100%" height="100%" gap="0" horizontalAlign="center" verticalAlign="middle">
+	<charts:PieChart id="chart" height="100%" width="100%"
+					 paddingRight="5" paddingLeft="5" color="0x323232"
+					 dataProvider="{dataProvider}" 
+					 showDataTips="true" dataTipFunction="dataTipFunction">
+		
+		<charts:series>
+			<series:PieSeries labelPosition="insideWithCallout" fontSize="16" field="value" labelFunction="myLabelFunction" explodeRadius=".1">
+			
+			</series:PieSeries>
+		</charts:series>
+	</charts:PieChart> 
+	<s:HGroup width="100%" horizontalAlign="left" verticalAlign="middle" gap="0">
+		<s:Button width="100%" label="New" click="add_clickHandler(event)"/>
+		<s:Button width="100%" label="Manage" click="manage_clickHandler(event)"/>
+		<s:Button width="100%" label="Options" click="moreCharts_clickHandler(event)"/>
+	</s:HGroup>
+	</s:VGroup>
+</s:View>

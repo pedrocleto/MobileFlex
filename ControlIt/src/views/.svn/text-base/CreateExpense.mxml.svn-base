@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark"
+		xmlns:mx="library://ns.adobe.com/flex/mx"
+		title="Create" xmlns:dao="dao.*" 
+		viewActivate="view1_viewActivateHandler(event)"
+		xmlns:components="com.pialabs.eskimo.components.*">
+
+	<fx:Script>
+		<![CDATA[		
+			import model.Expense;
+			
+			import mx.events.ValidationResultEvent;
+			
+			import spark.events.ViewNavigatorEvent;
+			
+			[Bindable]
+			private var expense:Expense=new Expense();
+			
+			private var update:Boolean=false;
+
+			private var valueValid:Boolean=false;
+			private var nameValid:Boolean=false;
+
+			
+			[Bindable]
+			public var selectedDate:Date=new Date();
+
+			[Bindable]
+			private var imgSource:Bitmap;
+			
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				navigator.popToFirstView();
+			}
+			
+			protected function button2_clickHandler(event:MouseEvent):void
+			{
+				navigator.popView();
+			}
+
+
+			protected function save_clickHandler(event:MouseEvent):void
+			{
+				nameValidator.validate();
+				currValidator.validate();
+				save();
+			}
+			
+			protected function save():void
+			{
+				if(valueValid && nameValid)
+				{					
+					expense.img=savingImg.source as String;
+					expense.date= dateChooser.selectedDate;
+					if(update)
+					{
+						expensesService.update(expense);
+						navigator.popView();
+					}
+					else
+					{
+						expensesService.create(expense);
+						navigator.popView();
+					}
+				}
+			}
+
+
+			protected function view1_viewActivateHandler(event:ViewNavigatorEvent):void
+			{
+				nameValid=false;
+				valueValid=false;
+				if(data && (data is Expense))
+				{				
+					expense=data as Expense;
+					if(expense.date)
+					{
+						selectedDate=new Date(expense.date);					
+					}
+	
+					if(expense.img)
+					{
+						i.source=expense.img
+						savingImg.source=expense.img;
+						i.visible=true;
+						i.includeInLayout=true;
+					}
+					update=true;
+				}
+			}
+
+			protected function currValidator_validHandler(event:ValidationResultEvent):void
+			{
+				valueValid=true;
+			}
+
+
+			protected function currValidator_invalidHandler(event:ValidationResultEvent):void
+			{
+				valueValid=false;
+			}
+
+			protected function photo_clickHandler(event:MouseEvent):void
+			{
+				if (CameraUI.isSupported)
+				{
+					var cameraUI:CameraUI = new CameraUI();
+					cameraUI.addEventListener(MediaEvent.COMPLETE, function(event:MediaEvent):void {
+						i.source = event.data.file.url;
+						savingImg.source= event.data.file.url;
+						i.visible=true;
+						i.includeInLayout=true;
+						l.visible=false;
+						l.includeInLayout=false;
+					});
+					cameraUI.launch(MediaType.IMAGE);
+				}
+				else
+				{
+					l.text = "Camera not supported";
+					i.visible=false;
+					i.includeInLayout=false;
+					l.visible=true;
+					l.includeInLayout=true;
+				}
+			}
+
+
+			protected function imageViewer_clickHandler(event:MouseEvent):void
+			{
+				navigator.pushView(FileFromCamera,i.source);
+			}
+			
+			protected function deleteButton_clickHandler(event:MouseEvent):void
+			{				
+				i.source=null;
+				savingImg.source=null;
+				i.visible=false;
+				i.includeInLayout=false;
+			}
+			
+			protected function newButton_clickHandler(event:MouseEvent):void
+			{
+				data=null;
+				expense=new Expense();
+				update=false;
+				i.source=null;
+				savingImg.source=null;
+				i.visible=false;
+				i.includeInLayout=false;
+				valueValid=false;
+				selectedDate=new Date();
+				typeField.selectedValue="O";
+			}
+			
+			protected function nameValidator_validHandler(event:ValidationResultEvent):void
+			{
+				nameValid=true;
+				
+			}
+			
+			protected function nameValidator_invalidHandler(event:ValidationResultEvent):void
+			{
+				nameValid=false;				
+			}
+			
+		]]>
+	</fx:Script>
+
+	<fx:Binding source="nameField.text" destination="expense.name"/>
+	<fx:Binding source="valueField.text" destination="expense.value"/>
+	<fx:Binding source="typeField.selectedValue as String" destination="expense.type"/>	
+
+	<fx:Declarations>
+		<dao:ExpenseDAO id="expensesService"/> 
+		<s:RadioButtonGroup id="typeField" selectedValue="{expense.type}"/>
+		<mx:CurrencyValidator id="currValidator"
+							  source="{valueField}"
+							  property="text"
+							  required="true"
+							  valid="currValidator_validHandler(event)"
+							  invalid="currValidator_invalidHandler(event)"/>
+		<mx:Validator id="nameValidator"
+					  source="{nameField}"
+					  property="text"
+					  valid="nameValidator_validHandler(event)"
+					  invalid="nameValidator_invalidHandler(event)"
+					  required="true"/>
+	</fx:Declarations>
+	<s:navigationContent>
+		<s:Button label="Back" click="button2_clickHandler(event)"/>
+	</s:navigationContent>
+	<s:actionContent>
+		<s:Button label="Home" click="button1_clickHandler(event)"/>
+		<!--<s:Button label="+" width="100%" id="newButton" click="newButton_clickHandler(event)"/>
+		<s:Button label="S" width="100%" id="saveButton" click="save_clickHandler(event)"/>
+		<s:Button label="P" width="100%" id="photoButton" click="photo_clickHandler(event)"/>-->
+	</s:actionContent>
+	<s:VGroup width="100%" height="100%" horizontalAlign="left" paddingTop="16">
+	<s:Scroller width="100%" height="100%">
+	<s:VGroup width="100%" height="100%" horizontalAlign="left" paddingTop="16">
+
+		
+		<s:HGroup width="100%" verticalAlign="middle">
+			<s:Label text="Name:" width="75"/>
+			<s:TextInput width="100%" id="nameField" text="{expense.name}" maxChars="30"/>
+		</s:HGroup>
+
+		<s:HGroup width="100%" verticalAlign="middle">
+			<s:Label text="Value:" width="75"/>
+			<s:TextInput width="100%" id="valueField" text="{expense.value}" restrict="0-9\.\-"/>
+		</s:HGroup>
+
+		<s:HGroup width="100%" verticalAlign="middle" paddingTop="16">
+			<s:Label text="Date:" width="75"/>	
+			<components:DateChooser id="dateChooser" selectedDate="{selectedDate}"/>		
+		</s:HGroup>
+		<s:HGroup width="100%" verticalAlign="middle" paddingTop="16">
+			<s:Label text="Type:" width="75"/>
+			<s:VGroup width="100%" horizontalAlign="justify">
+				<s:RadioButton label="Expense" groupName="typeField" value="O" selected="true"/>
+				<s:RadioButton label="Income" groupName="typeField" value="I"/>
+			</s:VGroup>
+		</s:HGroup>
+	
+		<s:HGroup width="100%" horizontalAlign="center" verticalAlign="middle">
+			<s:Label id="l" includeInLayout="false" visible="false"/>
+			<s:Image id="i" width="160" height="160" click="imageViewer_clickHandler(event)" includeInLayout="false" visible="false"/>
+			<s:Image id="savingImg" width="480" height="600" click="imageViewer_clickHandler(event)" includeInLayout="false" visible="false"/>
+			<s:Button label="Delete" id="deleteButton" click="deleteButton_clickHandler(event)" includeInLayout="{i.visible}" visible="{i.visible}"/>
+		</s:HGroup>
+		
+	</s:VGroup>
+	</s:Scroller>
+	<s:HGroup width="100%" gap="0">
+		<s:Button label="New" width="100%" id="newButton" click="newButton_clickHandler(event)"/>
+		<s:Button label="Save" width="100%" id="saveButton" click="save_clickHandler(event)"/>
+		<s:Button label="Take Photo" width="100%" id="photoButton" click="photo_clickHandler(event)"/>
+	</s:HGroup>
+	</s:VGroup>
+</s:View>

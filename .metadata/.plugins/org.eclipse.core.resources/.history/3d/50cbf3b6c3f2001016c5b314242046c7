@@ -1,0 +1,17 @@
+package flexUnitTests
+{
+	[Suite]
+	[RunWith("org.flexunit.runners.Suite")]
+	public class ddd
+	{
+		new RealLifeSuite();
+		new BIFF2Suite(); 
+		new BIFF3Suite(); 
+		new BIFF4Suite(); 
+		new BIFF5Suite();
+		new BIFF8Suite();
+		new WorkbookSuite();
+		new CdfSuite();
+		new UtilsSuite();
+	}
+}

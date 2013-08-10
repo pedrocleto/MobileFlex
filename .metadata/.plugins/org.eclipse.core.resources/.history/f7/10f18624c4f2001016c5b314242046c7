@@ -1,0 +1,27 @@
+package flexUnitTests
+{
+	import tests.biff2Suite.BIFF2Suite;
+	import tests.biff3Suite.BIFF3Suite;
+	import tests.biff4Suite.BIFF4Suite;
+	import tests.biff5Suite.BIFF5Suite;
+	import tests.biff8Suite.BIFF8Suite;
+	import tests.cdfSuite.CdfSuite;
+	import tests.realLifeSuite.RealLifeSuite;
+	import tests.utilsSuite.UtilsSuite;
+	import tests.workbookSuite.WorkbookSuite;
+
+	[Suite]
+	[RunWith("org.flexunit.runners.Suite")]
+	public class ddd
+	{
+		new RealLifeSuite();
+		new BIFF2Suite(); 
+		new BIFF3Suite(); 
+		new BIFF4Suite(); 
+		new BIFF5Suite();
+		new BIFF8Suite();
+		new WorkbookSuite();
+		new CdfSuite();
+		new UtilsSuite();
+	}
+}

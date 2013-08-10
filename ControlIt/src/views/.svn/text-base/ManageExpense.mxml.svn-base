@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009"
+				 xmlns:s="library://ns.adobe.com/flex/spark"
+				 xmlns:mx="library://ns.adobe.com/flex/mx"
+				 xmlns:dao="dao.*"
+				 title="Manage" 
+				 viewActivate="search()" 
+				 xmlns:components="com.pialabs.eskimo.components.*" xmlns:renderers="renderers.*">
+
+	<fx:Script>
+		<![CDATA[
+			import ExpenseResponder.ExpensesResponder;
+			
+			import com.as3xls.xls.Cell;
+			import com.as3xls.xls.ExcelFile;
+			import com.as3xls.xls.Sheet;
+			import com.as3xls.xls.formula.Formula;
+			import com.as3xls.xls.formula.Tokens;
+			import com.pialabs.eskimo.events.DeletableListEvent;
+			
+			import enums.TypeEnum;
+			
+			import flashx.textLayout.events.ModelChange;
+			
+			import model.Expense;
+			
+			import mx.collections.ArrayCollection;
+			import mx.formatters.DateFormatter;
+			import mx.graphics.ImageSnapshot;
+			
+			import spark.components.Image;
+			import spark.events.IndexChangeEvent;
+			
+			[Bindable]
+			protected var listData:ArrayCollection=new ArrayCollection();
+			
+			[Bindable]
+			protected var totalValue:String="";
+
+			private var fileReference:FileReference;  
+			private var xls:Class;  
+			private var sheet:Sheet;  
+			
+			[Bindable]  
+			private var fields:Array = new Array();  
+			
+			protected function home_clickHandler(event:MouseEvent):void
+			{
+				navigator.popToFirstView();
+			}
+
+			protected function back_clickHandler(event:MouseEvent):void
+			{
+				navigator.popView();
+			}
+
+			protected function add_clickHandler(event:MouseEvent):void
+			{
+				navigator.pushView(CreateExpense);
+			}
+			
+			protected function search():void
+			{
+				var expensesResponder:ExpensesResponder=new ExpensesResponder();
+				listData=expensesService.getAllItems();
+				processTotal();
+			}
+			
+
+			protected function expensesList_clickHandler(event:Event):void
+			{
+				// TODO Auto-generated method stub
+				var expense:Expense=expensesList.selectedItem as Expense;
+				if(expense && expense.id==-1)
+				{
+					navigator.pushView(CreateExpense);
+				}
+				else
+				{
+					if(expense && ((!isNaN(expense.id)) && expense.id!=0))
+						navigator.pushView(CreateExpense,expense);
+				}
+			}
+			
+			public function labelFunctions(item:Object):String
+			{
+				var exp:Expense=(item as Expense);
+				var value:String;
+				var dateformatter:DateFormatter=new DateFormatter();
+				dateformatter.formatString="DD-MM-YYYY";
+				if(exp)
+				{
+					value=exp.name+(exp.date==null?"":"\n"+dateformatter.format(exp.date));	
+				}
+				return value;
+			}
+			
+			public function messageFunctions(item:Object):String
+			{
+				var exp:Expense=(item as Expense);
+				var value:String;
+				if(exp && exp.id>0)
+				{
+					if(exp.type=="I")
+					{
+						value=exp.value;
+					}
+					else
+					{
+						value="-"+exp.value;
+					}
+
+				}
+				return value;
+			}
+			
+			protected function expensesList_itemDeletedHandler(event:DeletableListEvent):void
+			{
+				if(event.item.id==0)
+				{
+					listData.addItem(event.item);
+					processTotal();
+				}
+				else
+				{
+					var expense:Expense=event.item as Expense;
+					if(expense && ((!isNaN(expense.id)) && expense.id!=0 && expense.id!=-1))
+					{
+						expensesService.deleteItemsById(expense.id);
+						listData=expensesService.getAllItems();
+						processTotal();
+					}
+				}
+			}
+		
+			protected function validateDelete(index:int):Boolean
+			{
+				if(index>1)
+					return true;
+				else
+				{
+					if(listData.length>0)
+					{
+						var exp:Expense=listData[0] as Expense;
+						if(exp.id>0)
+							return true;
+						else
+						{
+							expensesList.editionMode = checkbox.selected=false;
+							return false;
+						}
+					}
+					else
+						return false;
+					
+				}
+			}
+			
+			
+			protected function checkbox_changeHandler(event:Event):void
+			{
+				expensesList.editionMode = checkbox.selected;
+			}
+			
+			protected function processTotal():void
+			{
+				var len:int=listData.length;
+				var total:Number=0;
+				for(var i:int=0; i< len;i++)
+				{
+					var obj:Object=listData[i];
+								
+					if(obj.type=="I")
+					{
+						total=total + Number(obj.value);
+					}
+					else
+						total=total-Number(obj.value);
+				}
+				if(total>=0)
+				{
+					totalField.styleName="myFontStyleIncome";
+					totalValue=total.toString();
+				}
+				else
+				{
+					totalField.styleName="myFontStyleOutcome";
+					totalValue=total.toString();
+				}
+				
+				totalField.text=totalValue;
+
+			}
+			
+			private function exportToExcel(event:Event):void  
+			{  
+				var result:ArrayCollection=expensesService.getAllItems();
+				if(result && result.length>0 && (result[0] as Expense).id>=0)
+				{
+					sheet = new Sheet();  
+					var dataProviderCollection:ArrayCollection = result as ArrayCollection;  
+					var rowCount:int = dataProviderCollection.length;  
+					sheet.resize(rowCount + 2,5);  
+					var columns:Array=["Name","Value","Type","Date","Image Location"];  
+					fields=["name","value","type","date","img"];  
+					var i:int = 0;  
+					for each (var field:String in columns)
+					{  
+						sheet.setCell(0,i,field.toString());  
+						i++;  
+					}
+					
+					var record:Object =null;
+					for(var r:int=0; r < rowCount; r++)  
+					{  
+						record = dataProviderCollection.getItemAt(r);  
+						/*insert record starting from row no 2 else  
+						headers will be overwritten*/  
+						insertRecordInSheet(r+1,sheet,record);  
+					}  
+					
+					sheet.setCell(r+1,0,"Total:");
+					if(r<=1)		
+						sheet.setCell(r+1,1,record.value);
+					else
+					{
+						var num:int=r+1;
+						sheet.setCell(r+1,1,"=SUM(B2+B"+num+")");
+					}					
+					
+					var xls:ExcelFile = new ExcelFile();  
+					xls.sheets.addItem(sheet);  
+					
+					var bytes: ByteArray = xls.saveToByteArray();  
+					var fr:FileReference = new FileReference();  
+					fr.save(bytes,"export"+new Date().time+".xls");  
+				}
+			}  
+			
+			
+			private function insertRecordInSheet(row:int,sheet:Sheet,record:Object):void  
+			{  
+				var i:int = 0;  
+				for each(var field:String in fields)
+				{  
+					
+					if(field=="type")
+					{
+						if(record[field].toString()==TypeEnum.INCOME)
+							sheet.setCell(row,i,"Income");
+						else
+							sheet.setCell(row,i,"Expense");
+					}
+					else if (field=="date")
+					{
+						var dateformatter:DateFormatter=new DateFormatter();
+						dateformatter.formatString="DD-MM-YYYY JJ:NN";
+						sheet.setCell(row,i,dateformatter.format(record[field]));
+					}
+					else if (field=="img")
+					{
+						/* var img:Image=new Image();
+						img.width=400;
+						img.height=600;
+						img.source=record[field].toString();  */
+						//var imgFile:File = File.documentsDirectory.resolvePath(record[field].toString());
+						
+						//var imageSnap:ImageSnapshot = ImageSnapshot.captureImage(img);
+						//var imageByteArray:ByteArray = imageSnap.data as ByteArray;
+						sheet.setCell(row,i,record[field].toString());
+					}
+					else if(field=="value")
+					{
+						if(record.type==TypeEnum.OUTCOME)
+							sheet.setCell(row,i,"-"+record[field].toString());
+						else
+							sheet.setCell(row,i,record[field].toString());
+					}
+					else
+					{
+						sheet.setCell(row,i,record[field].toString());
+					}
+					
+					i++;  
+				}  
+			}
+			
+		]]>
+	</fx:Script>
+
+	<fx:Declarations>
+		<dao:ExpenseDAO id="expensesService"/> 
+	</fx:Declarations>
+	<s:navigationContent>
+		<s:Button label="Back" click="back_clickHandler(event)"/>
+	</s:navigationContent>
+	<s:actionContent>
+		<s:Button label="Home" click="home_clickHandler(event)"/>
+	</s:actionContent>
+	
+	<s:VGroup width="100%" height="100%" gap="0" horizontalAlign="center" verticalAlign="middle">
+		<components:DeletableList id="expensesList" width="100%" height="100%"
+								  dataProvider="{listData}"
+								  click="expensesList_clickHandler(event)"
+								  itemDeleted="expensesList_itemDeletedHandler(event)"
+								  labelField="name"
+								  labelFunction="labelFunctions">
+		<components:itemRenderer>
+			<fx:Component>
+					<renderers:CustomDeleteItemRenderer height="120"  messageField="value" messageFunction="{outerDocument.messageFunctions}" 
+														decorator="@Embed('icons/Brian-banana-dance.gif')">
+					</renderers:CustomDeleteItemRenderer>
+				</fx:Component>
+			</components:itemRenderer>
+		</components:DeletableList>
+		
+	<s:VGroup width="100%" height="20%" paddingLeft="32" horizontalAlign="left" verticalAlign="middle" visible="{validateDelete(listData.length)}" includeInLayout="{validateDelete(listData.length)}">
+		<s:Label text="Total:"/>
+		<s:Label text="{totalValue}" id="totalField"/>
+	</s:VGroup>
+	<s:HGroup width="100%" horizontalAlign="left" verticalAlign="middle" gap="0">
+		<s:Button width="100%" label="New" click="add_clickHandler(event)"/>
+		<s:Button width="100%" label="To Excel" click="exportToExcel(event)"/>
+		<s:CheckBox id="checkbox"
+					change="checkbox_changeHandler(event)"
+					label="Delete Mode" visible="{validateDelete(listData.length)}" includeInLayout="{validateDelete(listData.length)}"/>
+	</s:HGroup>
+	</s:VGroup>
+</s:View>

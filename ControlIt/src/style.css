@@ -1,0 +1,17 @@
+/* CSS file */
+@namespace s "library://ns.adobe.com/flex/spark";
+@namespace components "com.pialabs.eskimo.components.*";
+@namespace renderers "renderers.*";
+
+components|DeletableList s|Button
+{
+	textShadowColor: #000000;
+}
+
+.myFontStyleOutcome { 
+	color: #FF0000;
+}
+
+.myFontStyleIncome { 
+	color: #00FF00;
+}

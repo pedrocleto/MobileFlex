@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<components:DeletableItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+								  xmlns:s="library://ns.adobe.com/flex/spark" xmlns:components="com.pialabs.eskimo.components.*"
+								  creationComplete="deletableitemrenderer1_creationCompleteHandler(event)"
+								  updateComplete="deletableitemrenderer1_creationCompleteHandler(event)">
+	
+	<fx:Script>
+		<![CDATA[
+			import com.pialabs.eskimo.components.DeletableList;
+			import com.pialabs.eskimo.events.DeletableListEvent;
+			
+			import enums.TypeEnum;
+			
+			import model.Expense;
+			
+			import mx.events.FlexEvent;
+			import mx.events.StateChangeEvent;
+
+			protected function deletableitemrenderer1_creationCompleteHandler(event:FlexEvent):void
+			{
+				if(data is Expense && (data as Expense).type== TypeEnum.INCOME)
+					this.setStyle("messageStyleName","myFontStyleIncome");	
+				else if (data is Expense && (data as Expense).type== TypeEnum.OUTCOME)
+					this.setStyle("messageStyleName","myFontStyleOutcome");	
+				
+				this.dispatchEvent(new StateChangeEvent(StateChangeEvent.CURRENT_STATE_CHANGE,true));
+			}
+			
+			protected override function onDelete(event:Event):void
+			{
+				if(owner && owner is DeletableList)
+				{
+					var list:DeletableList= owner as DeletableList;
+					var delEvent:DeletableListEvent=new DeletableListEvent(DeletableListEvent.ITEM_DELETED,false,false,mouseX,mouseY,this,false,false,false,true,0,itemIndex,data,this);
+					if(list.dataProvider && list.dataProvider.length>0)
+					{
+						list.dataProvider.removeItemAt(list.dataProvider.getItemIndex(data));
+						list.dispatchEvent(delEvent);
+					}
+				}
+			
+			}
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+</components:DeletableItemRenderer>

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009"
+		xmlns:s="library://ns.adobe.com/flex/spark"
+		xmlns:dao="dao.*"
+		title="Export">
+	<fx:Script>
+		<![CDATA[
+			import com.as3xls.xls.Cell;
+			import com.as3xls.xls.ExcelFile;
+			import com.as3xls.xls.Sheet;
+			
+			import enums.TypeEnum;
+			
+			import model.Expense;
+			
+			import mx.collections.ArrayCollection;
+			import mx.formatters.DateFormatter;
+			import mx.graphics.ImageSnapshot;
+			
+			import spark.components.Image;
+			
+			private var fileReference:FileReference;  
+			private var xls:Class;  
+			private var sheet:Sheet;  
+			
+			[Bindable]  
+			private var fields:Array = new Array();  
+			
+			private function exportToExcel(event:Event):void  
+			{  
+				var result:ArrayCollection=expensesService.getAllItems();
+				if(result && result.length>0 && (result[0] as Expense).id>=0)
+				{
+					sheet = new Sheet();  
+					var dataProviderCollection:ArrayCollection = result as ArrayCollection;  
+					var rowCount:int = dataProviderCollection.length;  
+					sheet.resize(rowCount + 1,5);  
+					var columns:Array=["Name","Value","Type","Date","Image"];  
+					fields=["name","value","type","date","img"];  
+					var i:int = 0;  
+					for each (var field:String in columns)
+					{  
+						sheet.setCell(0,i,field.toString());  
+						i++;  
+					}  
+					
+					for(var r:int=0; r < rowCount; r++)  
+					{  
+						var record:Object = dataProviderCollection.getItemAt(r);  
+						/*insert record starting from row no 2 else  
+						headers will be overwritten*/  
+						insertRecordInSheet(r+1,sheet,record);  
+					}  
+					var xls:ExcelFile = new ExcelFile();  
+					xls.sheets.addItem(sheet);  
+					
+					var bytes: ByteArray = xls.saveToByteArray();  
+					var fr:FileReference = new FileReference();  
+					fr.save(bytes,"export.xls");  
+				}
+			}  
+			private function insertRecordInSheet(row:int,sheet:Sheet,record:Object):void  
+			{  
+				var colCount:int = 5;  
+				for(var c:int; c < colCount; c++)  
+				{  
+					var i:int = 0;  
+					for each(var field:String in fields)
+					{  
+
+						if(field=="type")
+						{
+							if(record[field].toString()==TypeEnum.INCOME)
+								sheet.setCell(row,i,"Income");
+							else
+								sheet.setCell(row,i,"Expense");
+						}
+						else if (field=="date")
+							{
+							var dateformatter:DateFormatter=new DateFormatter();
+							dateformatter.formatString="DD-MM-YYYY JJ:NN";
+							sheet.setCell(row,i,dateformatter.format(record[field]));
+						}
+						else if (field=="img")
+						{
+							var img:Image=new Image();
+							img.width=400;
+							img.height=600;
+							img.source=record[field].toString(); 
+							var imgFile:File = File.documentsDirectory.resolvePath(record[field].toString());
+							
+							//var imageSnap:ImageSnapshot = ImageSnapshot.captureImage(img);
+							//var imageByteArray:ByteArray = imageSnap.data as ByteArray;
+							sheet.setCell(row,i,imgFile.data);
+						}
+						else
+						{
+							sheet.setCell(row,i,record[field].toString());
+						}
+						
+						i++;  
+					}  
+				}  
+			}
+			protected function home_clickHandler(event:MouseEvent):void
+			{
+				navigator.popToFirstView();
+			}
+			
+			protected function back_clickHandler(event:MouseEvent):void
+			{
+				navigator.popView();
+			}
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<dao:ExpenseDAO id="expensesService"/> 
+	</fx:Declarations>
+	<s:navigationContent>
+		<s:Button label="Back" click="back_clickHandler(event)"/>
+	</s:navigationContent>
+	<s:actionContent>
+		<s:Button label="Home" click="home_clickHandler(event)"/>
+	</s:actionContent>
+	<s:VGroup width="100%" height="100%" gap="0" horizontalAlign="center" verticalAlign="middle">
+		<s:HGroup width="100%" gap="0" horizontalAlign="left" verticalAlign="middle">
+			<s:Button width="100%" label="Export" click="exportToExcel(event)"/>
+		</s:HGroup>
+	</s:VGroup>
+</s:View>
